@@ -1,0 +1,197 @@
+#!/usr/bin/env bash
+#shellcheck disable=SC1091,SC2155
+set -euo pipefail
+readonly -- VERSION='1.0.2'
+readonly -- PRG0="$(readlink -en -- "$0")"
+#shellcheck disable=SC2034
+readonly -- PRGDIR="${PRG0%/*}" PRG="${PRG0##*/}"
+declare -ix VERBOSE=1 DEBUG=0
+#shellcheck disable=SC2015
+[ -t 2 ] && declare -- RED=$'\033[0;31m' YELLOW=$'\033[0;33m' GREEN=$'\033[0;32m' NOCOLOR=$'\033[0m' || declare -- RED='' YELLOW='' GREEN='' NOCOLOR=''
+error() { local msg; for msg in "$@"; do >&2 printf '%s: %serror%s: %s\n' "$PRG" "$RED" "$NOCOLOR" "$msg"; done; }
+die() { local -i exitcode=1; if (($#)); then exitcode=$1; shift; fi; if (($#)); then error "$@"; fi; exit "$exitcode"; }
+grep() { /usr/bin/grep "$@"; }
+find() { /usr/bin/find "$@"; }
+rsync() { /usr/bin/rsync "$@"; }
+ssh() { /usr/bin/ssh "$@"; }
+scp() { /usr/bin/scp "$@"; }
+sed() { /usr/bin/sed "$@"; }
+ll() { /bin/ls -lh --color=always --time-style=long-iso "$@"; }
+ls() { /usr/bin/ls -h --color=always --time-style=long-iso "$@"; }
+l() { /usr/bin/ls --color=always -CF "$@"; }
+clearrows() { echo -en "$NOCOLOR"; yes '' | head -n "${LINES:-43}" |tw -s xxxslow ||true; echo -en "${NOCOLOR}\r"; }
+declare -fx grep find rsync ssh scp sed ll ls l clearrows
+noarg() { if (($# < 2)) || [[ ${2:0:1} == '-' ]]; then die 2 "Missing argument for option '$1'"; fi; true; }
+decp() { declare -p "$@" | sed 's/^declare -[a-zA-Z-]* //'; }
+xcleanup() { local -i exitcode=${1:-0}; [[ -t 0 ]] && printf '\e[?25h'; exit "$exitcode"; }
+trap 'xcleanup $?' SIGINT EXIT
+# ----------------------------------------------------------------------------------------
+
+source "$PRGDIR"/typewriter.inc.sh
+
+usage() {
+  local -i exitcode=${1:-0}
+  local -- helptext=$(cat <<EOT
+$PRG $VERSION - Play .script file.
+
+Usage:
+  $PRG [OPTIONS] file.script
+
+Options:
+  -c, --clear       Clear screen and wait 5 seconds
+                    $(decp screen_clear)
+  -w, --comment-cols COLS
+                    Set column width for # comments
+                    $(decp comment_cols)
+  -o, --comment-speed SPEED
+                    Set comment typewriter speed
+                    (xfast vfast fast normal slow vslow xslow)
+                    $(decp comment_speed)
+  -m, --cmd-speed   Set command typewriter speed
+                    (xfast vfast fast normal slow vslow xslow)
+                    $(decp cmd_speed)
+  -U, --username USER
+                    Set USER
+                    $(decp USER)
+  -H, --hostname HOSTNAME
+                    Set HOSTNAME
+                    $(decp HOSTNAME)
+  -v, --verbose     Increase output verbosity
+  -q, --quiet       Suppress non-error messages
+                    $(decp VERBOSE)
+  -V, --version     Print version and exit
+                    $(decp VERSION)
+  -h, --help        Display this help
+
+Examples:
+  $PRG motivation.se.script
+
+  $PRG -c -o xfast -m fast -w 65 -U sysadmin -H yatti.id motivation.se.script
+
+EOT
+)
+  ((exitcode)) && >&2 echo "$helptext" || echo "$helptext"
+  [[ -z "${1:-}" ]] && return
+  exit "$exitcode"
+}
+
+rtrim() {
+  local v="$*";
+  echo "${v%"${v##*[![:blank:]]}"}";
+}
+
+
+#=============================================================================
+main() {
+  local -- USER=sysadmin HOSTNAME=yatti
+
+  local -- FILENAME=''
+  local -i screen_clear=0
+  local -a CMDS=()
+  local -- cmd color
+  local -i doprompt=1
+  local -- comment_speed=vfast cmd_speed=normal
+  local -i comment_cols=${COLUMNS:-78}
+
+  while (($#)); do case "$1" in
+    -w|--comment-cols)  noarg "$@"; shift; comment_cols="$1" ;;
+    -o|--comment-speed) noarg "$@"; shift; comment_speed="$1" ;;
+    -m|--cmd-speed)     noarg "$@"; shift; cmd_speed="$1" ;;
+    -U|--username)      noarg "$@"; shift; USER="$1" ;;
+    -H|--hostname)      noarg "$@"; shift; HOSTNAME="$1" ;;
+    -c|--clear)         screen_clear=1 ;;
+    -h|--help)          usage 0;; -v|--verbose) VERBOSE+=1;; -q|--quiet) VERBOSE=0;; -V|--version) echo "$PRG $VERSION"; exit 0;;
+    -[womUHchvqV]*) #shellcheck disable=SC2046 #split up single options
+                        set -- '' $(printf -- "-%c " $(grep -o . <<<"${1:1}")) "${@:2}";;
+    -*)                 die 22 "Invalid option '$1'" ;;
+    *)                  [[ -n "$FILENAME" ]] && die 1 "Can only specify one filename"
+                        FILENAME=$(readlink -fn -- "$1")
+  esac; shift; done
+  [[ -z $FILENAME ]] && usage 1
+
+  if [[ ! -f $FILENAME ]]; then
+    [[ ! -f "$FILENAME".script ]] && die 1 "Scriptfile '$FILENAME' was not found"
+    FILENAME=$(readlink -en -- "$FILENAME".script)
+  fi
+
+  # NOTE: anchor into the directory of the FILENAME.script
+  cd "$(dirname -- "$FILENAME")"
+
+  ((screen_clear)) && {
+    cln -qN || true; clear; sleep 3
+  }
+
+  IFS=$'\n' mapfile -t CMDS <"$FILENAME"
+
+  local -i lasterr=0
+  local -a cmds=()
+
+  for cmd in "${CMDS[@]}"; do
+    ((doprompt)) && {
+      ((lasterr)) && >&2 echo "# buggerit"
+      cPWD=${PWD/"$VECTORDBS"/...}
+      echo -e "\e]${lasterr};$USER@$HOSTNAME: $cPWD\a\e]0;$USER@$HOSTNAME: $cPWD\a\e]0;$USER@$HOSTNAME: $cPWD\a\033[38;5;8m$lasterr:\033[00m\033[01;32m$USER@$HOSTNAME\033[00m:\033[01;34m$cPWD\033[00m\$ "
+    }
+
+    cmd="$(rtrim "$cmd")"
+
+    # if empty command, sleep 1 sec
+    if [[ -z "$cmd" ]]; then
+      doprompt=0
+      sleep 1
+      continue
+    # if comment or hashbang, ignore
+    elif [[ "${cmd:0:2}" == '##' || "${cmd:0:2}" == '#!' ]]; then
+      continue
+    # if command is a number, sleep number secs
+    elif [[ "$cmd" =~ ^[0-9]+$ ]]; then
+      doprompt=0
+      sleep "$cmd"
+      continue
+    # silent command; no typewriter
+    elif [[ "${cmd:0:1}" == '!' ]]; then
+      # "!" by itself means echo linefeed only
+      [[ -z "${cmd:1}" ]] && {
+        echo
+        sleep 0.05
+        continue
+      }
+      lasterr=0
+      eval "${cmd:1}" || { lasterr=$?; doprompt=1; }
+      continue
+    fi
+
+    # is cmd a #typewriter comment?
+    if [[ "${cmd:0:1}" == '#' ]]; then
+      IFS=$'\n' readarray -t cmds < <(fmt -p '# ' -w $comment_cols <<<"$cmd")
+      doprompt=0
+      echo -en "$GREEN"
+      typewriter --speed "$comment_speed" "${cmds[@]}"
+      echo -en "$NOCOLOR\r"
+      continue
+    fi
+
+    # it's a command
+    doprompt=1
+    cmdtext=$cmd
+    # remove '||true'
+    cmdtext="${cmdtext%\|\| true*}"
+    cmdtext="${cmdtext%\|\|true*}"
+    # remove '|typewriter'
+    cmdtext="${cmdtext%\| typewriter*}"
+    cmdtext="${cmdtext%\|typewriter*}"
+    # remove '|tw'
+    cmdtext="${cmdtext%\| tw*}"
+    cmdtext="${cmdtext%\|tw*}"
+
+    echo -en "$YELLOW"
+    typewriter --speed "$cmd_speed" "$cmdtext"
+    echo -en "$NOCOLOR\r"
+
+    lasterr=0
+    eval "$cmd" 2>&1 || lasterr=$?
+  done
+}
+
+main "$@"
+#fin
