@@ -51,15 +51,15 @@ scripttour [OPTIONS] file.script
 
 ### Options
 
-- `-c, --clear` - Clear screen and wait 5 seconds
-- `-o, --comment-speed SPEED` - Set comment typewriter speed
-- `-m, --cmd-speed SPEED` - Set command typewriter speed
-- `-U, --username USER` - Set custom username
-- `-H, --hostname HOSTNAME` - Set custom hostname
-- `-v, --verbose` - Increase output verbosity
-- `-q, --quiet` - Suppress non-error messages
-- `-V, --version` - Print version and exit
-- `-h, --help` - Display help
+    `-c, --clear` - Clear screen and wait 5 seconds
+    `-o, --comment-speed SPEED` - Set comment typewriter speed
+    `-m, --cmd-speed SPEED` - Set command typewriter speed
+    `-U, --username USER` - Set custom username
+    `-H, --hostname HOSTNAME` - Set custom hostname
+    `-v, --verbose` - Increase output verbosity
+    `-q, --quiet` - Suppress non-error messages
+    `-V, --version` - Print version and exit
+    `-h, --help` - Display help
 
 SPEED: xxxfast xxfast xfast vfast fast normal slow vslow xslow xxslow xxxslow
 
