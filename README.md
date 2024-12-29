@@ -1,6 +1,6 @@
 # ScriptTour
 
-A Bash 'script player' that executes and displays commands with typewriter-like effects, perfect for demos, tutorials, and presentations.
+A Bash 'script player' that executes and displays commands with typewriter-like effects, perfect for demos, tutorials, and presentations of terminal based information.
 
 ## Features
 
@@ -26,12 +26,16 @@ Using root/sudo:
 cd /usr/share
 # Clone the repository
 git clone https://github.com/Open-Technology-Foundation/scripttour.git
-# Make the script executable and symlink into /usr/local/bin
-cd scripttour
-chmod +x scripttour
 # Put a symlink in /usr/local/bin
-ln -s "$PWD"/scripttour /usr/local/bin/scripttour
+ln -s /usr/share/scripttour/scripttour /usr/local/bin/scripttour
 ```
+
+As a one-liner (root/sudo):
+
+```bash
+cd /usr/share && git clone https://github.com/Open-Technology-Foundation/scripttour.git && ln -s /usr/share/scripttour/scripttour /usr/local/bin/scripttour
+```
+
 
 ## Usage
 
