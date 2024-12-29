@@ -20,21 +20,23 @@ A Bash 'script player' that executes and displays commands with typewriter-like 
 
 ## Installation
 
-1. Clone the repository:
-```bash
-git clone https://github.com/Open-Technology-Foundation/scripttour.git
-cd scripttour
-```
+Using root/sudo:
 
-2. Make the script executable and symlink into /usr/local/bin:
 ```bash
+cd /usr/share
+# Clone the repository
+git clone https://github.com/Open-Technology-Foundation/scripttour.git
+# Make the script executable and symlink into /usr/local/bin
+cd scripttour
 chmod +x scripttour
+# Put a symlink in /usr/local/bin
 ln -s "$PWD"/scripttour /usr/local/bin/scripttour
 ```
 
 ## Usage
 
 Basic usage:
+
 ```bash
 scripttour [OPTIONS] file.script
 ```
@@ -56,13 +58,15 @@ SPEED: xxxfast xxfast xfast vfast fast normal slow vslow xslow xxslow xxxslow
 ### Example Usage
 
 Simple playback:
+
 ```bash
 scripttour motivation.se.script
 ```
 
 Advanced configuration:
+
 ```bash
-./scripttour -c -o xfast -m fast -U sysadmin -H yatti.id motivation.se.script
+scripttour -c -o xfast -m fast -U sysadmin -H yatti.id motivation.se.script
 ```
 
 ## Script File Format
@@ -79,8 +83,8 @@ The script file (.script) supports several special syntax features:
 Example script file:
 
 ```bash
-## This is a silent comment
-# This comment will be typed out using typewriter
+## This is a silent/ignored comment
+# Lines starting with # are typed out using typewriter
 ls -la
 !echo "This command runs silently"
 5
@@ -96,16 +100,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 This project is licensed under the GPL3 License - see the LICENSE file for details.
 
-## Version
-
-Current version: 1.0.2
-
 ## Author
 
-Gary Dean
-
-## Acknowledgments
-
-- Thanks to all contributors and testers
-- Inspired by various demo tools and presentation utilities
+Gary Dean garydean@yatti.id
 
