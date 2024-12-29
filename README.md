@@ -20,20 +20,24 @@ A Bash 'script player' that executes and displays commands with typewriter-like 
 
 ## Installation
 
-Using root/sudo:
 
 ```bash
+# Use root
+sudo su
+# Install into /usr/share
 cd /usr/share
 # Clone the repository
 git clone https://github.com/Open-Technology-Foundation/scripttour.git
 # Put a symlink in /usr/local/bin
 ln -s /usr/share/scripttour/scripttour /usr/local/bin/scripttour
+# Test
+scripttour --help
 ```
 
-As a one-liner (root/sudo):
+As a one-liner:
 
 ```bash
-cd /usr/share && git clone https://github.com/Open-Technology-Foundation/scripttour.git && ln -s /usr/share/scripttour/scripttour /usr/local/bin/scripttour
+sudo sh -c 'cd /usr/share && git clone https://github.com/Open-Technology-Foundation/scripttour.git && ln -s /usr/share/scripttour/scripttour /usr/local/bin/scripttour && scripttour --help'
 ```
 
 
