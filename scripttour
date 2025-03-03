@@ -117,16 +117,15 @@ main() {
   # NOTE: anchor into the directory of the FILENAME.script
   cd "$(dirname -- "$FILENAME")"
 
-  ((screen_clear)) && {
-    cln -qN || true; clear; sleep 3
-  }
+  ((screen_clear)) && { cln -qN || true; clear; sleep 3; }
 
   IFS=$'\n' mapfile -t CMDS <"$FILENAME"
 
-  local -i lasterr=0
+  local -i lasterr=0 ccc=0
   local -a cmds=()
 
   for cmd in "${CMDS[@]}"; do
+    ((ccc++))
     ((doprompt)) && {
       ((lasterr)) && >&2 echo "# buggerit"
       cPWD=${PWD/"$VECTORDBS"/...}
@@ -135,29 +134,50 @@ main() {
 
     cmd="$(rtrim "$cmd")"
 
-    # if empty command, sleep 1 sec
+    # if empty command, sleep 0.25 sec
     if [[ -z "$cmd" ]]; then
       doprompt=0
-      sleep 1
+      sleep 0.25
       continue
-    # if comment or hashbang, ignore
-    elif [[ "${cmd:0:2}" == '##' || "${cmd:0:2}" == '#!' ]]; then
+
+    # if ## it's a comment, ignore
+    elif [[ "${cmd:0:2}" == '##' ]]; then
       continue
-    # if command is a number, sleep number secs
-    elif [[ "$cmd" =~ ^[0-9]+$ ]]; then
-      doprompt=0
-      sleep "$cmd"
+
+    #shebang
+    elif [[ "${cmd:0:2}" == '#!' ]]; then
+      # ignore first shebang
+      ((ccc==1)) && continue
+      cmd=$(trim "${cmd:2}")
+      [[ -z "$cmd" ]] && cmd='0.25'
+      # is it an an integer number?
+      if [[ "$cmd" =~ ^[0-9]+$ ]]; then
+        doprompt=0
+        sleep "$cmd"
+        continue
+      fi
+      #!command - execute command
+      lasterr=0
+      eval "${cmd:1}" || { lasterr=$?; doprompt=1; }
       continue
+
     # silent command; no typewriter
     elif [[ "${cmd:0:1}" == '!' ]]; then
-      # "!" by itself means echo linefeed only
+      # "!" by itself means echo one line
       [[ -z "${cmd:1}" ]] && {
         echo
         sleep 0.05
         continue
       }
+      #!command - execute command
       lasterr=0
       eval "${cmd:1}" || { lasterr=$?; doprompt=1; }
+      continue
+
+    # if command is a number, sleep number secs
+    elif [[ "$cmd" =~ ^[0-9]+$ ]]; then
+      doprompt=0
+      sleep "$cmd"
       continue
     fi
 
